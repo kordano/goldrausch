@@ -1,0 +1,16 @@
+{:port 8091
+ :build :dev
+ :version 0.01
+ :date "not now"
+ :logging? false
+ :logfile ""
+ :init? false
+ :http-server? true
+ :app
+ {:credentials
+  {:consumer-key ""
+   :consumer-secret ""
+   :access-token ""
+   :access-token-secret ""}
+  :follow []
+  :track ["bitcoin"]}}

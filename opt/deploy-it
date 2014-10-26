@@ -1,0 +1,2 @@
+#!/bin/bash
+docker stop goldrausch; docker rm goldrausch;  docker run -d -v /home/konny/volumes/goldrausch/data:/opt/data -v /home/konny/volumes/goldrausch/log:/opt/log --name goldrausch -p 8091:8091 kordano/goldrausch

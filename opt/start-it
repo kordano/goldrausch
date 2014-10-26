@@ -1,0 +1,5 @@
+#!/bin/bash
+# start datomic
+/opt/datomic/bin/transactor /opt/tweets.properties &
+# start lesezeichen
+cd /opt/goldrausch; lein run /opt/server-config.edn
