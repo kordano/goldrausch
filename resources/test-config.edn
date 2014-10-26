@@ -1,10 +1,12 @@
-{:port 8090
+{:port 8091
  :build :dev
  :version 0.01
  :date "not now"
  :logging? false
  :logfile ""
  :init? false
+ :cold-start true
+ :schema "schema.edn"
  :http-server? true
  :app
  {:credentials

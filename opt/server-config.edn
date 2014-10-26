@@ -6,6 +6,7 @@
  :logfile ""
  :init? false
  :http-server? true
+ :cold-start true
  :app
  {:credentials
   {:consumer-key ""

@@ -11,7 +11,7 @@
             [taoensso.timbre :as timbre])
   (:import datomic.Util))
 
-(def db-uri-base "datomic:mem://")
+(def db-uri-base "datomic:free://0.0.0.0:4334")
 
 (def server-state (atom nil))
 
@@ -34,6 +34,12 @@
   (doseq [txd (read-all f)]
     (d/transact conn txd))
   :done)
+
+
+(defn db-conn []
+  (let [uri (str db-uri-base "/goldrausch")]
+    (d/create-database uri)
+    (d/connect uri)))
 
 
 (defn- scratch-conn
@@ -78,6 +84,7 @@
   (let [{:keys [follow track credentials]} (:app @state)
         [in out] (gezwitscher credentials)]
     (>!! in {:topic :start-stream :track track :follow follow})
+    (println (str "Start crawling " track))
     (let [output (<!! out)]
       (go-loop [status (<! (:status-ch output))]
         (when status
@@ -89,12 +96,17 @@
 (defn initialize
   "Initialize server state using a configuration file"
   [state path]
-  (let [conn (scratch-conn)
+  (let [conn (db-conn)
         local-config (-> path slurp read-string)]
     (swap! state merge (assoc-in local-config [:conn] conn))
     state))
 
 
+(defn -main [& args]
+  (initialize server-state (first args))
+  (when (:cold-start @server-state)
+    (transact-all (:conn @server-state) (io/resource (:schema @server-state))))
+  (start-stream server-state))
 
 
 (comment
@@ -106,9 +118,5 @@
   (def g (start-stream server-state))
 
   (>!! (first g) {:topic :stop-stream})
-
-  (get-all-tweets (:conn @server-state))
-
-
 
   )
