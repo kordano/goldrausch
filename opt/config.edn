@@ -1,0 +1,10 @@
+{:twitter {:credentials {:consumer-key ""
+                         :consumer-secret ""
+                         :access-token ""
+                         :access-token-secret ""}
+           :init-schema? false
+           :follow []
+           :track ["bitcoin"]}
+ :okcoin {:subscribed-chans #{"ok_btcusd_ticker" "ok_btcusd_depth60"}
+          :init-schema? true}
+ :datomic {:uri "datomic:free://0.0.0.0:4334"}}
