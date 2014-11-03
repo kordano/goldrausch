@@ -2,7 +2,8 @@
   (:require [reloaded.repl :refer [system init start stop go reset]]
             [com.stuartsierra.component :as component]
             [goldrausch.twitter :refer [get-all-tweets]]
-            [goldrausch.core :refer [dev-system]]))
+            [goldrausch.core :refer [dev-system]]
+            [datomic.api :as d]))
 
 ;; how access system value then?
 #_(reloaded.repl/set-init! dev-system)

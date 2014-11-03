@@ -1,6 +1,7 @@
 (ns goldrausch.core
   (:gen-class :main true)
   (:require [goldrausch.twitter :refer [new-twitter-collector get-all-tweets]]
+            [goldrausch.okcoin :refer [new-okcoin-collector]]
             [com.stuartsierra.component :as component]
             [datomic.api :as d]
             [clojure.java.io :as io]
@@ -15,6 +16,10 @@
    :twitter-collector
    (component/using
     (new-twitter-collector (config :twitter))
+    {:db :db})
+   :okcoin-collector
+   (component/using
+    (new-okcoin-collector (config :okcoin))
     {:db :db})))
 
 (defn -main [config-filename & args]

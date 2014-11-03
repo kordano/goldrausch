@@ -5,7 +5,10 @@
             [clj-time.format :as f]
             [clj-time.coerce :as c]
             [datomic.api :as d]
-            [clojure.core.async :refer [go go-loop <! >! <!! >!!]]))
+            [clojure.core.async :refer [go go-loop <! >! <!! >!!]]
+            [taoensso.timbre :as timbre]))
+
+(timbre/refer-timbre)
 
 (def schema [{:db/id #db/id[:db.part/db]
               :db/ident :publish/at
@@ -75,10 +78,11 @@
         (when init-schema?
           (d/transact (:conn db) schema))
         (>!! in {:topic :start-stream :track track :follow follow})
-        (println (str "Start crawling " track))
+        (info (str "Start crawling " track))
         (let [output (<!! out)]
           (go-loop [status (<! (:status-ch output))]
             (when status
+              (debug "Twitter status:" status)
               (transact-tweet (:conn db) status)
               (recur (<! (:status-ch output))))))
         (assoc component :in in :out out))))
