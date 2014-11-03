@@ -33,6 +33,6 @@ ADD ./opt /opt
 RUN git clone https://github.com/kordano/goldrausch.git /opt/goldrausch
 
 # define port
-EXPOSE 8091
+EXPOSE [8091 4334]
 
 CMD ["/opt/start-it"]
