@@ -4,7 +4,7 @@
             [clojure.data.json :as json]
             [clojure.set :as set]
             [clojure.string :as str]
-            [com.stuartierra.component :as component]
+            [com.stuartsierra.component :as component]
             [datomic.api :as d]
             [http.async.client :as cli]
             [taoensso.timbre :as timbre]))

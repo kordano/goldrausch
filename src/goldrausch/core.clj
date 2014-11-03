@@ -10,9 +10,10 @@
             [taoensso.timbre :as timbre]
             (system.components [datomic :refer [new-datomic-db]])))
 
-(defn dev-system [config]
+(defn prod-system [config]
   (component/system-map
-   :db (new-datomic-db (str "datomic:mem://" (d/squuid)))
+   :db (new-datomic-db (or (get-in config [:datomic :uri])
+                           (str "datomic:mem://" (d/squuid))))
    :twitter-collector
    (component/using
     (new-twitter-collector (config :twitter))
@@ -23,4 +24,4 @@
     {:db :db})))
 
 (defn -main [config-filename & args]
-  (dev-system (read-string (slurp config-filename))))
+  (prod-system (read-string (slurp config-filename))))
