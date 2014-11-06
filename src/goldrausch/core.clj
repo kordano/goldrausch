@@ -10,6 +10,9 @@
             [taoensso.timbre :as timbre]
             (system.components [datomic :refer [new-datomic-db]])))
 
+(timbre/set-config! [:appenders :spit :enabled?] true)
+(timbre/set-config! [:shared-appender-config :spit-filename] "/tmp/goldrausch.log")
+
 (defn prod-system [config]
   (component/system-map
    :db (new-datomic-db (or (get-in config [:datomic :uri])
