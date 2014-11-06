@@ -243,7 +243,7 @@ protocol of url. tag-table is an atom"
       (d/transact conn schema)
       conn))
 
-  (def conn (d/connect "datomic:free://aphrodite:4334"))
+  (def conn (d/connect "datomic:free://aphrodite:4334/goldrausch"))
 
 
 

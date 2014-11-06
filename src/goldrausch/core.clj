@@ -27,4 +27,7 @@
     {:db :db})))
 
 (defn -main [config-filename & args]
-  (prod-system (read-string (slurp config-filename))))
+  (-> (slurp config-filename)
+      read-string
+      prod-system
+      component/start))
