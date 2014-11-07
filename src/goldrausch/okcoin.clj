@@ -39,40 +39,39 @@
 (defn client-connect!
   "Connects to url. Puts [in out] channels on return channel when ready.
 Only supports websocket at the moment, but is supposed to dispatch on
-protocol of url. tag-table is an atom"
+protocol of url. "
   [url]
   (let [host (.getHost (java.net.URL. (str/replace url #"^ws" "http"))) ; HACK
         http-client (cli/create-client) ;; TODO use as singleton var?
         in (chan)
         out (chan)
         opener (chan)]
-    (try
-      (cli/websocket http-client url
-                     :open (fn [ws]
-                             (info "ws-opened" ws)
-                             (go-loop [m (<! out)]
-                                      (if m
-                                        (do
-                                          (debug "client sending msg to:" url m)
-                                          (cli/send ws :text (json/write-str m))
-                                          (recur (<! out)))
-                                        (do
-                                          (cli/close http-client)
-                                          (async/close! in))))
-                             (async/put! opener [in out])
-                             (async/close! opener))
-                     :text (fn [ws ms]
-                             (let [m (json/read-str ms)]
-                               (debug "client received msg from:" url m)
-                               (async/put! in (with-meta m {:host host}))))
-                     :close (fn [ws code reason]
-                              (info "closing" ws code reason)
-                              (async/close! in)
-                              (async/close! out))
-                     :error (fn [ws err] (error err "ws-error" url)
-                              (async/close! opener)))
-      (catch Exception e
-        (error "client-connect error:" url e)))
+    (go-loop []
+      (let [close-ch (chan)]
+        (cli/websocket http-client url
+                       :open (fn [ws]
+                               (info "ws-opened" ws)
+                               (go-loop [m (<! out)]
+                                 (when m
+                                   (do
+                                     (debug "client sending msg to:" url m)
+                                     (cli/send ws :text (json/write-str m))
+                                     (recur (<! out)))))
+                               (async/put! opener [in out])
+                               (async/close! opener))
+                       :text (fn [ws ms]
+                               (let [m (json/read-str ms)]
+                                 (debug "client received msg from:" url m)
+                                 (async/put! in (with-meta m {:host host}))))
+                       :close (fn [ws code reason]
+                                (info "closing" ws code reason)
+                                (async/close! close-ch))
+                       :error (fn [ws err] (error err "ws-error" url)
+                                (async/close! opener)
+                                (async/close! close-ch)))
+        (<! (timeout 60))
+        (<! close-ch) ;; wait on unblocking close
+        (recur)))
     opener))
 
 (def schema [{:db/id #db/id[:db.part/db]
