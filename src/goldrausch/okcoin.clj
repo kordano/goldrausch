@@ -52,11 +52,14 @@ protocol of url. "
                        :open (fn [ws]
                                (info "ws-opened" ws)
                                (go-loop [m (<! out)]
-                                 (when m
+                                 (if m
                                    (do
                                      (debug "client sending msg to:" url m)
                                      (cli/send ws :text (json/write-str m))
-                                     (recur (<! out)))))
+                                     (recur (<! out)))
+                                   (do
+                                     (async/put! close-ch :shutdown)
+                                     (cli/close ws))))
                                (async/put! opener [in out])
                                (async/close! opener))
                        :text (fn [ws ms]
@@ -69,9 +72,9 @@ protocol of url. "
                        :error (fn [ws err] (error err "ws-error" url)
                                 (async/close! opener)
                                 (async/close! close-ch)))
-        (<! (timeout 60))
-        (<! close-ch) ;; wait on unblocking close
-        (recur)))
+        (<! (timeout 60000))
+        (when-not (= (<! close-ch) :shutdown)
+          (recur)))) ;; wait on unblocking close
     opener))
 
 (def schema [{:db/id #db/id[:db.part/db]
