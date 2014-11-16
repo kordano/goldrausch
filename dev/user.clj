@@ -14,4 +14,25 @@
   (swap! sys component/start)
   (swap! sys component/stop)
 
+  (->> (d/q '[:find ?p
+              :where
+              [?p :okcoin-btcusd/buy ?buy]]
+            (d/db (:conn (:db @sys))))
+       (map (comp (partial into {})
+                  (partial d/entity (d/db (:conn (:db @sys))))
+                  first)))
+
+  (->> (d/q '[:find ?p
+              :where
+              [?p :bitfinex-btcusd/price ?buy]]
+            (d/db (:conn (:db @sys))))
+       (map (comp (partial into {})
+                  (partial d/entity (d/db (:conn (:db @sys))))
+                  first)))
+
+  (d/q '[:find (count ?p)
+              :where
+              [?p :bitfinex-btcusd/price ?buy]]
+            (d/db (:conn (:db @sys))))
+
   (get-all-tweets (:conn (:db @sys))))

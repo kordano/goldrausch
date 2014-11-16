@@ -39,87 +39,89 @@
 (defn client-connect!
   "Connects to url. Puts [in out] channels on return channel when ready.
 Only supports websocket at the moment, but is supposed to dispatch on
-protocol of url. tag-table is an atom"
+protocol of url. "
   [url]
   (let [host (.getHost (java.net.URL. (str/replace url #"^ws" "http"))) ; HACK
         http-client (cli/create-client) ;; TODO use as singleton var?
         in (chan)
         out (chan)
         opener (chan)]
-    (try
-      (cli/websocket http-client url
-                     :open (fn [ws]
-                             (info "ws-opened" ws)
-                             (go-loop [m (<! out)]
-                                      (if m
-                                        (do
-                                          (debug "client sending msg to:" url m)
-                                          (cli/send ws :text (json/write-str m))
-                                          (recur (<! out)))
-                                        (do
-                                          (cli/close http-client)
-                                          (async/close! in))))
-                             (async/put! opener [in out])
-                             (async/close! opener))
-                     :text (fn [ws ms]
-                             (let [m (json/read-str ms)]
-                               (debug "client received msg from:" url m)
-                               (async/put! in (with-meta m {:host host}))))
-                     :close (fn [ws code reason]
-                              (info "closing" ws code reason)
-                              (async/close! in)
-                              (async/close! out))
-                     :error (fn [ws err] (error err "ws-error" url)
-                              (async/close! opener)))
-      (catch Exception e
-        (error "client-connect error:" url e)))
+    (go-loop []
+      (let [close-ch (chan)]
+        (cli/websocket http-client url
+                       :open (fn [ws]
+                               (info "ws-opened" ws)
+                               (go-loop [m (<! out)]
+                                 (if m
+                                   (do
+                                     (debug "client sending msg to:" url m)
+                                     (cli/send ws :text (json/write-str m))
+                                     (recur (<! out)))
+                                   (do
+                                     (async/put! close-ch :shutdown)
+                                     (cli/close ws))))
+                               (async/put! opener [in out])
+                               (async/close! opener))
+                       :text (fn [ws ms]
+                               (let [m (json/read-str ms)]
+                                 (debug "client received msg from:" url m)
+                                 (async/put! in (with-meta m {:host host}))))
+                       :close (fn [ws code reason]
+                                (info "closing" ws code reason)
+                                (async/close! close-ch))
+                       :error (fn [ws err] (error err "ws-error" url)
+                                (async/close! opener)
+                                (async/close! close-ch)))
+        (<! (timeout 60000))
+        (when-not (= (<! close-ch) :shutdown)
+          (recur)))) ;; wait on unblocking close
     opener))
 
 (def schema [{:db/id #db/id[:db.part/db]
-              :db/ident :btcusd/timestamp
+              :db/ident :okcoin-btcusd/timestamp
               :db/valueType :db.type/instant
               :db/cardinality :db.cardinality/one
               :db/index true
               :db.install/_attribute :db.part/db}
 
              {:db/id #db/id[:db.part/db]
-              :db/ident :btcusd/buy
+              :db/ident :okcoin-btcusd/buy
               :db/valueType :db.type/float
               :db/cardinality :db.cardinality/one
               :db/index true
               :db.install/_attribute :db.part/db}
              {:db/id #db/id[:db.part/db]
-              :db/ident :btcusd/sell
+              :db/ident :okcoin-btcusd/sell
               :db/valueType :db.type/float
               :db/cardinality :db.cardinality/one
               :db/index true
               :db.install/_attribute :db.part/db}
              {:db/id #db/id[:db.part/db]
-              :db/ident :btcusd/high
+              :db/ident :okcoin-btcusd/high
               :db/valueType :db.type/float
               :db/cardinality :db.cardinality/one
               :db/index true
               :db.install/_attribute :db.part/db}
              {:db/id #db/id[:db.part/db]
-              :db/ident :btcusd/low
+              :db/ident :okcoin-btcusd/low
               :db/valueType :db.type/float
               :db/cardinality :db.cardinality/one
               :db/index true
               :db.install/_attribute :db.part/db}
              {:db/id #db/id[:db.part/db]
-              :db/ident :btcusd/last
+              :db/ident :okcoin-btcusd/last
               :db/valueType :db.type/float
               :db/cardinality :db.cardinality/one
               :db/index true
               :db.install/_attribute :db.part/db}
              {:db/id #db/id[:db.part/db]
-              :db/ident :btcusd/vol
+              :db/ident :okcoin-btcusd/vol
               :db/valueType :db.type/float
               :db/cardinality :db.cardinality/one
               :db/index true
               :db.install/_attribute :db.part/db}
              {:db/id #db/id[:db.part/db]
-              :db/ident :btcusd/provider
+              :db/ident :okcoin-btcusd/provider
               :db/valueType :db.type/string
               :db/cardinality :db.cardinality/one
               :db/doc "Unique name of the coin data provider."
@@ -128,31 +130,31 @@ protocol of url. tag-table is an atom"
 
              ;; btcusd60
              {:db/id #db/id[:db.part/db]
-              :db/ident :btcusd/bids
+              :db/ident :okcoin-btcusd/bids
               :db/valueType :db.type/ref
               :db/cardinality :db.cardinality/many
               :db/index true
               :db.install/_attribute :db.part/db}
              {:db/id #db/id[:db.part/db]
-              :db/ident :btcusd/asks
+              :db/ident :okcoin-btcusd/asks
               :db/valueType :db.type/ref
               :db/cardinality :db.cardinality/many
               :db/index true
               :db.install/_attribute :db.part/db}
              {:db/id #db/id[:db.part/db]
-              :db/ident :btcusd/bid
+              :db/ident :okcoin-btcusd/bid
               :db/valueType :db.type/double
               :db/cardinality :db.cardinality/one
               :db/index true
               :db.install/_attribute :db.part/db}
              {:db/id #db/id[:db.part/db]
-              :db/ident :btcusd/ask
+              :db/ident :okcoin-btcusd/ask
               :db/valueType :db.type/double
               :db/cardinality :db.cardinality/one
               :db/index true
               :db.install/_attribute :db.part/db}
              {:db/id #db/id[:db.part/db]
-              :db/ident :btcusd/depth
+              :db/ident :okcoin-btcusd/depth
               :db/valueType :db.type/double
               :db/cardinality :db.cardinality/one
               :db/index true
@@ -162,14 +164,14 @@ protocol of url. tag-table is an atom"
   (let [{buy "buy" sell "sell" high "high" low "low" last "last" timestamp "timestamp" vol "vol"}
         (get json-tick "data")
         id (d/tempid :db.part/user)]
-    [[:db/add id :btcusd/provider (get json-tick "channel")]
-     [:db/add id :btcusd/buy (Float/parseFloat buy)]
-     [:db/add id :btcusd/sell (Float/parseFloat sell)]
-     [:db/add id :btcusd/high (Float/parseFloat high)]
-     [:db/add id :btcusd/low (Float/parseFloat low)]
-     [:db/add id :btcusd/last (Float/parseFloat last)]
-     [:db/add id :btcusd/vol (Float/parseFloat (str/replace vol #"," ""))]
-     [:db/add id :btcusd/timestamp (java.util.Date. (Long/parseLong timestamp))]]))
+    [[:db/add id :okcoin-btcusd/provider (get json-tick "channel")]
+     [:db/add id :okcoin-btcusd/buy (Float/parseFloat buy)]
+     [:db/add id :okcoin-btcusd/sell (Float/parseFloat sell)]
+     [:db/add id :okcoin-btcusd/high (Float/parseFloat high)]
+     [:db/add id :okcoin-btcusd/low (Float/parseFloat low)]
+     [:db/add id :okcoin-btcusd/last (Float/parseFloat last)]
+     [:db/add id :okcoin-btcusd/vol (Float/parseFloat (str/replace vol #"," ""))]
+     [:db/add id :okcoin-btcusd/timestamp (java.util.Date. (Long/parseLong timestamp))]]))
 
 (defn btcusd-depth60->trans [json-tick]
   (let [{bids "bids" asks "asks" timestamp "timestamp"}
@@ -177,16 +179,16 @@ protocol of url. tag-table is an atom"
         id (d/tempid :db.part/user)]
     (vec (concat (mapcat (fn [[bid depth]]
                            (let [bid-id (d/tempid :db.part/user)]
-                             [[:db/add id :btcusd/bids bid-id]
-                              [:db/add bid-id :btcusd/bid (double bid)]
-                              [:db/add bid-id :btcusd/depth (double depth)]])) bids)
+                             [[:db/add id :okcoin-btcusd/bids bid-id]
+                              [:db/add bid-id :okcoin-btcusd/bid (double bid)]
+                              [:db/add bid-id :okcoin-btcusd/depth (double depth)]])) bids)
                  (mapcat (fn [[ask depth]]
                            (let [ask-id (d/tempid :db.part/user)]
-                             [[:db/add id :btcusd/asks ask-id]
-                              [:db/add ask-id :btcusd/ask (double ask)]
-                              [:db/add ask-id :btcusd/depth (double depth)]])) asks)
-                 [[:db/add id :btcusd/provider (get json-tick "channel")]
-                  [:db/add id :btcusd/timestamp (java.util.Date. (Long/parseLong timestamp))]]))))
+                             [[:db/add id :okcoin-btcusd/asks ask-id]
+                              [:db/add ask-id :okcoin-btcusd/ask (double ask)]
+                              [:db/add ask-id :okcoin-btcusd/depth (double depth)]])) asks)
+                 [[:db/add id :okcoin-btcusd/provider (get json-tick "channel")]
+                  [:db/add id :okcoin-btcusd/timestamp (java.util.Date. (Long/parseLong timestamp))]]))))
 
 (defn tick->trans [tick]
   (case (get tick "channel")
@@ -209,7 +211,7 @@ protocol of url. tag-table is an atom"
           (>!! out {:event "addChannel" :channel c}))
         (go-loop [ticks (<! in)]
           (when ticks
-            (debug "transacting ticks:" ticks)
+            (debug "transacting ticks" #_ticks)
             (d/transact conn (mapcat tick->trans ticks))
             (recur (<! in))))
         (assoc component :in in :out out))))
@@ -243,7 +245,7 @@ protocol of url. tag-table is an atom"
       (d/transact conn schema)
       conn))
 
-  (def conn (create-db))
+  (def conn (d/connect "datomic:free://aphrodite:4334/goldrausch"))
 
 
 
@@ -268,5 +270,5 @@ protocol of url. tag-table is an atom"
 
   (d/q '[:find ?p ?buy
          :where
-         [?p :btcusd/buy ?buy]]
+         [?p :okcoin-btcusd/buy ?buy]]
        (d/db (:conn (:db @sys)))))

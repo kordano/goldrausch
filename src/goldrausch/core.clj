@@ -2,6 +2,7 @@
   (:gen-class :main true)
   (:require [goldrausch.twitter :refer [new-twitter-collector get-all-tweets]]
             [goldrausch.okcoin :refer [new-okcoin-collector]]
+            [goldrausch.bitfinex :refer [new-bitfinex-collector]]
             [com.stuartsierra.component :as component]
             [datomic.api :as d]
             [clojure.java.io :as io]
@@ -9,6 +10,9 @@
             [aprint.core :refer [aprint]]
             [taoensso.timbre :as timbre]
             (system.components [datomic :refer [new-datomic-db]])))
+
+(timbre/set-config! [:appenders :spit :enabled?] true)
+(timbre/set-config! [:shared-appender-config :spit-filename] "/tmp/goldrausch.log")
 
 (defn prod-system [config]
   (component/system-map
@@ -21,7 +25,14 @@
    :okcoin-collector
    (component/using
     (new-okcoin-collector (config :okcoin))
+    {:db :db})
+   :bitfinex-collector
+   (component/using
+    (new-bitfinex-collector (config :bitfinex))
     {:db :db})))
 
 (defn -main [config-filename & args]
-  (prod-system (read-string (slurp config-filename))))
+  (-> (slurp config-filename)
+      read-string
+      prod-system
+      component/start))
