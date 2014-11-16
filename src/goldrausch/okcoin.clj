@@ -78,50 +78,50 @@ protocol of url. "
     opener))
 
 (def schema [{:db/id #db/id[:db.part/db]
-              :db/ident :btcusd/timestamp
+              :db/ident :okcoin-btcusd/timestamp
               :db/valueType :db.type/instant
               :db/cardinality :db.cardinality/one
               :db/index true
               :db.install/_attribute :db.part/db}
 
              {:db/id #db/id[:db.part/db]
-              :db/ident :btcusd/buy
+              :db/ident :okcoin-btcusd/buy
               :db/valueType :db.type/float
               :db/cardinality :db.cardinality/one
               :db/index true
               :db.install/_attribute :db.part/db}
              {:db/id #db/id[:db.part/db]
-              :db/ident :btcusd/sell
+              :db/ident :okcoin-btcusd/sell
               :db/valueType :db.type/float
               :db/cardinality :db.cardinality/one
               :db/index true
               :db.install/_attribute :db.part/db}
              {:db/id #db/id[:db.part/db]
-              :db/ident :btcusd/high
+              :db/ident :okcoin-btcusd/high
               :db/valueType :db.type/float
               :db/cardinality :db.cardinality/one
               :db/index true
               :db.install/_attribute :db.part/db}
              {:db/id #db/id[:db.part/db]
-              :db/ident :btcusd/low
+              :db/ident :okcoin-btcusd/low
               :db/valueType :db.type/float
               :db/cardinality :db.cardinality/one
               :db/index true
               :db.install/_attribute :db.part/db}
              {:db/id #db/id[:db.part/db]
-              :db/ident :btcusd/last
+              :db/ident :okcoin-btcusd/last
               :db/valueType :db.type/float
               :db/cardinality :db.cardinality/one
               :db/index true
               :db.install/_attribute :db.part/db}
              {:db/id #db/id[:db.part/db]
-              :db/ident :btcusd/vol
+              :db/ident :okcoin-btcusd/vol
               :db/valueType :db.type/float
               :db/cardinality :db.cardinality/one
               :db/index true
               :db.install/_attribute :db.part/db}
              {:db/id #db/id[:db.part/db]
-              :db/ident :btcusd/provider
+              :db/ident :okcoin-btcusd/provider
               :db/valueType :db.type/string
               :db/cardinality :db.cardinality/one
               :db/doc "Unique name of the coin data provider."
@@ -130,31 +130,31 @@ protocol of url. "
 
              ;; btcusd60
              {:db/id #db/id[:db.part/db]
-              :db/ident :btcusd/bids
+              :db/ident :okcoin-btcusd/bids
               :db/valueType :db.type/ref
               :db/cardinality :db.cardinality/many
               :db/index true
               :db.install/_attribute :db.part/db}
              {:db/id #db/id[:db.part/db]
-              :db/ident :btcusd/asks
+              :db/ident :okcoin-btcusd/asks
               :db/valueType :db.type/ref
               :db/cardinality :db.cardinality/many
               :db/index true
               :db.install/_attribute :db.part/db}
              {:db/id #db/id[:db.part/db]
-              :db/ident :btcusd/bid
+              :db/ident :okcoin-btcusd/bid
               :db/valueType :db.type/double
               :db/cardinality :db.cardinality/one
               :db/index true
               :db.install/_attribute :db.part/db}
              {:db/id #db/id[:db.part/db]
-              :db/ident :btcusd/ask
+              :db/ident :okcoin-btcusd/ask
               :db/valueType :db.type/double
               :db/cardinality :db.cardinality/one
               :db/index true
               :db.install/_attribute :db.part/db}
              {:db/id #db/id[:db.part/db]
-              :db/ident :btcusd/depth
+              :db/ident :okcoin-btcusd/depth
               :db/valueType :db.type/double
               :db/cardinality :db.cardinality/one
               :db/index true
@@ -164,14 +164,14 @@ protocol of url. "
   (let [{buy "buy" sell "sell" high "high" low "low" last "last" timestamp "timestamp" vol "vol"}
         (get json-tick "data")
         id (d/tempid :db.part/user)]
-    [[:db/add id :btcusd/provider (get json-tick "channel")]
-     [:db/add id :btcusd/buy (Float/parseFloat buy)]
-     [:db/add id :btcusd/sell (Float/parseFloat sell)]
-     [:db/add id :btcusd/high (Float/parseFloat high)]
-     [:db/add id :btcusd/low (Float/parseFloat low)]
-     [:db/add id :btcusd/last (Float/parseFloat last)]
-     [:db/add id :btcusd/vol (Float/parseFloat (str/replace vol #"," ""))]
-     [:db/add id :btcusd/timestamp (java.util.Date. (Long/parseLong timestamp))]]))
+    [[:db/add id :okcoin-btcusd/provider (get json-tick "channel")]
+     [:db/add id :okcoin-btcusd/buy (Float/parseFloat buy)]
+     [:db/add id :okcoin-btcusd/sell (Float/parseFloat sell)]
+     [:db/add id :okcoin-btcusd/high (Float/parseFloat high)]
+     [:db/add id :okcoin-btcusd/low (Float/parseFloat low)]
+     [:db/add id :okcoin-btcusd/last (Float/parseFloat last)]
+     [:db/add id :okcoin-btcusd/vol (Float/parseFloat (str/replace vol #"," ""))]
+     [:db/add id :okcoin-btcusd/timestamp (java.util.Date. (Long/parseLong timestamp))]]))
 
 (defn btcusd-depth60->trans [json-tick]
   (let [{bids "bids" asks "asks" timestamp "timestamp"}
@@ -179,16 +179,16 @@ protocol of url. "
         id (d/tempid :db.part/user)]
     (vec (concat (mapcat (fn [[bid depth]]
                            (let [bid-id (d/tempid :db.part/user)]
-                             [[:db/add id :btcusd/bids bid-id]
-                              [:db/add bid-id :btcusd/bid (double bid)]
-                              [:db/add bid-id :btcusd/depth (double depth)]])) bids)
+                             [[:db/add id :okcoin-btcusd/bids bid-id]
+                              [:db/add bid-id :okcoin-btcusd/bid (double bid)]
+                              [:db/add bid-id :okcoin-btcusd/depth (double depth)]])) bids)
                  (mapcat (fn [[ask depth]]
                            (let [ask-id (d/tempid :db.part/user)]
-                             [[:db/add id :btcusd/asks ask-id]
-                              [:db/add ask-id :btcusd/ask (double ask)]
-                              [:db/add ask-id :btcusd/depth (double depth)]])) asks)
-                 [[:db/add id :btcusd/provider (get json-tick "channel")]
-                  [:db/add id :btcusd/timestamp (java.util.Date. (Long/parseLong timestamp))]]))))
+                             [[:db/add id :okcoin-btcusd/asks ask-id]
+                              [:db/add ask-id :okcoin-btcusd/ask (double ask)]
+                              [:db/add ask-id :okcoin-btcusd/depth (double depth)]])) asks)
+                 [[:db/add id :okcoin-btcusd/provider (get json-tick "channel")]
+                  [:db/add id :okcoin-btcusd/timestamp (java.util.Date. (Long/parseLong timestamp))]]))))
 
 (defn tick->trans [tick]
   (case (get tick "channel")
@@ -211,7 +211,7 @@ protocol of url. "
           (>!! out {:event "addChannel" :channel c}))
         (go-loop [ticks (<! in)]
           (when ticks
-            (debug "transacting ticks:" ticks)
+            (debug "transacting ticks" #_ticks)
             (d/transact conn (mapcat tick->trans ticks))
             (recur (<! in))))
         (assoc component :in in :out out))))
@@ -270,5 +270,5 @@ protocol of url. "
 
   (d/q '[:find ?p ?buy
          :where
-         [?p :btcusd/buy ?buy]]
+         [?p :okcoin-btcusd/buy ?buy]]
        (d/db (:conn (:db @sys)))))

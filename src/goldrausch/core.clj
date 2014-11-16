@@ -2,6 +2,7 @@
   (:gen-class :main true)
   (:require [goldrausch.twitter :refer [new-twitter-collector get-all-tweets]]
             [goldrausch.okcoin :refer [new-okcoin-collector]]
+            [goldrausch.bitfinex :refer [new-bitfinex-collector]]
             [com.stuartsierra.component :as component]
             [datomic.api :as d]
             [clojure.java.io :as io]
@@ -24,6 +25,10 @@
    :okcoin-collector
    (component/using
     (new-okcoin-collector (config :okcoin))
+    {:db :db})
+   :bitfinex-collector
+   (component/using
+    (new-bitfinex-collector (config :bitfinex))
     {:db :db})))
 
 (defn -main [config-filename & args]
