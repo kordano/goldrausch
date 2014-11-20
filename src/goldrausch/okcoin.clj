@@ -39,8 +39,9 @@
 (defn client-connect!
   "Connects to url. Puts [in out] channels on return channel when ready.
 Only supports websocket at the moment, but is supposed to dispatch on
-protocol of url. "
-  [url]
+protocol of url. init-fn is a function taking [in out] and doing setup after a
+(re)connect."
+  [url init-fn]
   (let [host (.getHost (java.net.URL. (str/replace url #"^ws" "http"))) ; HACK
         http-client (cli/create-client) ;; TODO use as singleton var?
         in (chan)
@@ -48,32 +49,37 @@ protocol of url. "
         opener (chan)]
     (go-loop []
       (let [close-ch (chan)]
-        (cli/websocket http-client url
-                       :open (fn [ws]
-                               (info "ws-opened" ws)
-                               (go-loop [m (<! out)]
-                                 (if m
-                                   (do
-                                     (debug "client sending msg to:" url m)
-                                     (cli/send ws :text (json/write-str m))
-                                     (recur (<! out)))
-                                   (do
-                                     (async/put! close-ch :shutdown)
-                                     (cli/close ws))))
-                               (async/put! opener [in out])
-                               (async/close! opener))
-                       :text (fn [ws ms]
-                               (let [m (json/read-str ms)]
-                                 (debug "client received msg from:" url m)
-                                 (async/put! in (with-meta m {:host host}))))
-                       :close (fn [ws code reason]
-                                (info "closing" ws code reason)
-                                (async/close! close-ch))
-                       :error (fn [ws err] (error err "ws-error" url)
-                                (async/close! opener)
-                                (async/close! close-ch)))
+        (try
+          (cli/websocket http-client url
+                         :open (fn [ws]
+                                 (info "ws-opened" ws)
+                                 (go-loop [m (<! out)]
+                                   (if m
+                                     (do
+                                       (debug "client sending msg to:" url #_m)
+                                       (cli/send ws :text (json/write-str m))
+                                       (recur (<! out)))
+                                     (do
+                                       (async/put! close-ch :shutdown)
+                                       (cli/close ws))))
+                                 (async/put! opener [in out])
+                                 (async/close! opener))
+                         :text (fn [ws ms]
+                                 (let [m (json/read-str ms)]
+                                   (debug "client received msg from:" url #_m)
+                                   (async/put! in (with-meta m {:host host}))))
+                         :close (fn [ws code reason]
+                                  (info "closing" ws code reason)
+                                  (async/close! close-ch))
+                         :error (fn [ws err] (error err "ws-error" url)
+                                  (async/close! opener)
+                                  (async/close! close-ch)))
+          (init-fn [in out])
+          (catch Exception e
+            (error "cannot setup websocket: " e)))
         (<! (timeout 60000))
         (when-not (= (<! close-ch) :shutdown)
+          (debug "reconnecting.")
           (recur)))) ;; wait on unblocking close
     opener))
 
@@ -202,17 +208,21 @@ protocol of url. "
     (if (:in component) ;; idempotent
       component
       (let [[in out] (<!! (client-connect! (or websocket-endpoint
-                                               "wss://real.okcoin.com:10440/websocket/okcoinapi")))
+                                               "wss://real.okcoin.com:10440/websocket/okcoinapi")
+                                           (fn [[in out]]
+                                             (doseq [c subscribed-chans]
+                                               (>!! out {:event "addChannel" :channel c})))))
             conn (:conn db)]
         (when init-schema?
           (debug "initializing schema:" schema)
           (d/transact conn schema))
-        (doseq [c subscribed-chans]
-          (>!! out {:event "addChannel" :channel c}))
         (go-loop [ticks (<! in)]
           (when ticks
-            (debug "transacting ticks" #_ticks)
-            (d/transact conn (mapcat tick->trans ticks))
+            (try
+              (debug "transacting ticks" #_ticks)
+              (d/transact conn (mapcat tick->trans ticks))
+              (catch Exception e
+                (error "transaction error: " e)))
             (recur (<! in))))
         (assoc component :in in :out out))))
   (stop [component]

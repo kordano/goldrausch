@@ -78,12 +78,15 @@
         (when init-schema?
           (d/transact (:conn db) schema))
         (>!! in {:topic :start-stream :track track :follow follow})
-        (info (str "Start crawling " track))
+        (info "Start crawling " track)
         (let [output (<!! out)]
           (go-loop [status (<! (:status-ch output))]
             (when status
               (debug "Twitter status:" status)
-              (transact-tweet (:conn db) status)
+              (try
+                (transact-tweet (:conn db) status)
+                (catch Exception e
+                  (error "transaction error: " status e)))
               (recur (<! (:status-ch output))))))
         (assoc component :in in :out out))))
   (stop [component]

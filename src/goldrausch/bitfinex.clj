@@ -157,7 +157,7 @@
           (debug "querying bitfinex")
           (alt! close-ch
                 :done
-                (timeout 10000)
+                (timeout 2000)
                 (do
                   (doseq [c subscribed-chans]
                     (async/thread
